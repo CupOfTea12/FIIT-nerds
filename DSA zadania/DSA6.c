@@ -6,268 +6,190 @@ Code by Rebeca Martinakova/CupOfTea12
 #include <stdio.h>
 #include <stdlib.h>
 
-// Global variable for counter
-int counter = 0;
-//Global variable for temporary memory
-char temp[15];
-char name[12];
-char surname[12];
-char dob[11];
-int bal, decimal,separator,negative;
-
 #define TABLE_SIZE 9999
+#define NAME_MAX_LENGTH 12
+#define DOB_MAX_LENGTH 11
 
-// Struct representing a node in the hash map
-typedef struct node {
-    char name[12];
-    char surname[12];
-    char dob[11];
+typedef struct personData {
+    char name[NAME_MAX_LENGTH];
+    char surname[NAME_MAX_LENGTH];
+    char dob[DOB_MAX_LENGTH];
     int balance;
-    struct node* next;
-} Node;
+    struct personData* next;
+} PersonDATA;
 
-// Function prototypes
-int hash(char* key1, char* key2, char* key3);
-int strToNum(char* balance);
-int customStrCmp(char* str1, char* str2);
-int insert(Node* hash_map[]);
-int search(Node* hash_map[]);
-int update(Node* hash_map[]);
-int delete(Node* hash_map[]);
+unsigned long hash(char* key1, char* key2, char* key3);
+int strToNum(char* str);
+void insert(PersonDATA* hash_map[], int * firstOutput);
+void search(PersonDATA* hash_map[], int * firstOutput);
+void update(PersonDATA* hash_map[], int * firstOutput);
+void delete(PersonDATA* hash_map[], int * firstOutput);
+int customStrCmp(const char* str1, const char* str2);
+void customStrCpy(char* dest, const char* src);
 
-// Function to compute the hash value for keys
-int hash(char* key1, char* key2, char* key3) {
-    int hash = 0;
-    counter = 0;
-    while (key1[counter] != '\0') {
-        hash = 33 * hash + key1[counter++];
-    }
-    counter = 0;
-    while (key2[counter] != '\0') {
-        hash = 33 * hash + key2[counter++];
-    }
-    counter = 0;
-    while (key3[counter] != '\0') {
-        hash = 33 * hash + key3[counter++];
-    }
-    return abs(hash) % TABLE_SIZE;
+unsigned long hash(char* key1, char* key2, char* key3) {
+    unsigned long hash = 5381;
+    int c;
+    while ((c = *key1++)) hash = ((hash << 5) + hash) + c;
+    while ((c = *key2++)) hash = ((hash << 5) + hash) + c;
+    while ((c = *key3++)) hash = ((hash << 5) + hash) + c;
+    return hash % TABLE_SIZE;
 }
 
-// Function to convert balance from string to integer
-int strToNum(char* balance) {
-     bal = 0;
-     decimal = 2;
-     separator = 0;
-     negative = 1;
-    
-    if (balance[0] == '-') {
-        negative = -1;
+int strToNum(char* str) {
+    int result = 0, sign = 1;
+    if (*str == '-') {
+        sign = -1;
+        ++str;
     }
-    counter = 0;
-    while (balance[counter] != '\0') {
-        if (balance[counter] != ',' && balance[counter] != '-') {
-            if (separator && decimal > 0) {
-                if (decimal == 1 && balance[counter + 1] > '5') {
-                    bal = bal * 10 + 1 + (balance[counter] - '0');
-                } else {
-                    bal = bal * 10 + (balance[counter] - '0');
-                }
-                decimal--;
-            } else if (decimal > 0) {
-                bal = bal * 10 + (balance[counter] - '0');
-            }
-        } else if (balance[counter] == ',') {
-            separator = 1;
-        }
-        counter++;
+    for (int decimal = 0; *str; str++) {
+        if (*str == ',') continue;
+        result = result * 10 + (*str - '0');
     }
-    return bal * negative;
+    return result * sign;
 }
 
-// Function to compare two strings
-int customStrCmp(char* str1, char* str2) {
-    counter = 0;
-    while (str1[counter] != '\0' && str2[counter] != '\0') {
-        if (str1[counter] != str2[counter]) {
-            return str1[counter] - str2[counter];
-        }
-        counter++;
-    }
-    return str1[counter] - str2[counter];
-}
-
-
-// Function to search for the balance associated with a key in the hash map
-int search(Node* hash_map[]) {
-    char name[12];
-    char surname[12];
-    char dob[11];
-    if (scanf("%s %s %s", name, surname, dob) != 3) {
-        return -1;  // Invalid number of parameters
-    }
-    int index = hash(name, surname, dob);
-    Node* current = hash_map[index];
-    while (current != NULL) {
-        if (customStrCmp(current->name, name) == 0 &&
-            customStrCmp(current->surname, surname) == 0 &&
-            customStrCmp(current->dob, dob) == 0) {
-            return current->balance;  // Return the balance associated with the key
-        }
-        current = current->next;
-    }
-    return -1;  // Key not found in the hash map
-}
-
-// Function to insert a node into the hash map
-int insert(Node* hash_map[]) {
-    Node* new_node = (Node*) malloc(sizeof(Node));
-    if (scanf("%s %s %s %s", new_node->name, new_node->surname, new_node->dob, temp) != 4) {
-        free(new_node);
-        return -1;  // Invalid number of parameters
-    }
-    int balance_to_int = strToNum(temp);
-    new_node->balance = balance_to_int;
-    new_node->next = NULL;
-    if (balance_to_int < 0) {
-        free(new_node);
-        return -1;  // Balance cannot be negative
-    }
-    int index = hash(new_node->name, new_node->surname, new_node->dob);
-    if (hash_map[index] == NULL) {
-        hash_map[index] = new_node;
-    } else {
-        Node* current = hash_map[index];
-        Node* prev = NULL;
-        while (current != NULL) {
-            if (customStrCmp(current->name, new_node->name) == 0 &&
-                customStrCmp(current->surname, new_node->surname) == 0 &&
-                customStrCmp(current->dob, new_node->dob) == 0) {
-                free(new_node);
-                return -1;  // Key already exists in the hash map
-            }
-            prev = current;
-            current = current->next;
-        }
-        prev->next = new_node;
-    }
-    return 0;  // Insertion successful
-}
-
-// Function to update the balance associated with a key in the hash map
-int update(Node* hash_map[]) {
-    name[12];
-    surname[12];
-    dob[11];
-    temp[15];
+void insert(PersonDATA* hash_map[], int *firstOutput) {
+    char name[NAME_MAX_LENGTH], surname[NAME_MAX_LENGTH], dob[DOB_MAX_LENGTH], temp[15];
     if (scanf("%s %s %s %s", name, surname, dob, temp) != 4) {
-        return -1;  // Invalid number of parameters
+        if (*firstOutput != 1) {
+            printf("\n");
+        } else *firstOutput = 0;
+        printf("insert failed");
+        return;
     }
-    int update_amount = strToNum(temp);
     int index = hash(name, surname, dob);
-    Node* current = hash_map[index];
-    while (current != NULL) {
-        if (customStrCmp(current->name, name) == 0 &&
-            customStrCmp(current->surname, surname) == 0 &&
-            customStrCmp(current->dob, dob) == 0) {
-            if (update_amount < 0 && ((update_amount < 0) ? update_amount * -1 : update_amount) > current->balance) {
-                return -1;  // Balance cannot be negative
-            }
-            current->balance += update_amount;
-            return 0;  // Update successful
+    for (PersonDATA* ptr = hash_map[index]; ptr; ptr = ptr->next) {
+        if (!customStrCmp(ptr->name, name) && !customStrCmp(ptr->surname, surname) && !customStrCmp(ptr->dob, dob)) {
+            if (*firstOutput != 1) {
+                printf("\n");
+            } else *firstOutput = 0;
+            printf("insert failed");
+            return;
         }
-        current = current->next;
     }
-    return -1;  // Key not found in the hash map
+    PersonDATA* new_node = malloc(sizeof(PersonDATA));
+    customStrCpy(new_node->name, name);
+    customStrCpy(new_node->surname, surname);
+    customStrCpy(new_node->dob, dob);
+    new_node->balance = strToNum(temp);
+    new_node->next = hash_map[index];
+    hash_map[index] = new_node;
 }
 
-// Function to delete a node from the hash map
-int delete(Node* hash_map[]) {
-    name[12];
-    surname[12];
-    dob[11];
+void search(PersonDATA* hash_map[], int *firstOutput) {
+    char name[NAME_MAX_LENGTH], surname[NAME_MAX_LENGTH], dob[DOB_MAX_LENGTH];
     if (scanf("%s %s %s", name, surname, dob) != 3) {
-        return -1; // Invalid number of parameters
+        if(*firstOutput != 1){
+            printf("\n");
+        } else *firstOutput = 0;
+        printf("search failed");
+        return;
     }
     int index = hash(name, surname, dob);
-    Node* current = hash_map[index];
-    Node* prev = NULL;
-    while (current != NULL) {
-        if (customStrCmp(current->name, name) == 0 &&
-            customStrCmp(current->surname, surname) == 0 &&
-            customStrCmp(current->dob, dob) == 0) {
-            if (prev == NULL) {
-                hash_map[index] = current->next;
-            } else {
-                prev->next = current->next;
-            }
-            free(current);
-            return 0;  // Deletion successful
+    int found = 0; // Flag to check if record is found
+    for (PersonDATA* ptr = hash_map[index]; ptr; ptr = ptr->next) {
+        if (!customStrCmp(ptr->name, name) && !customStrCmp(ptr->surname, surname) && !customStrCmp(ptr->dob, dob)) {
+            found = 1; // Record found
+            if(*firstOutput != 1) {
+                printf("\n");
+            } else *firstOutput = 0;
+            printf("%d,%02d", ptr->balance / 100, ptr->balance % 100);
+            break; // Exit loop after printing the result
         }
-        prev = current;
-        current = current->next;
     }
-    return -1;  // Key not found in the hash map
+    if (!found) { // If record not found
+        if(*firstOutput != 1) {
+            printf("\n");
+        } else *firstOutput = 0;
+        printf("search failed");
+    }
 }
 
-//---MAIN---//
-int main(void) {
-    char operator = getchar();
-    int first = 1;
-    Node* hash_map[TABLE_SIZE];
-    for (int i = 0; i < TABLE_SIZE; i++) {
-        hash_map[i] = NULL;
+void update(PersonDATA* hash_map[], int *firstOutput) {
+    char name[NAME_MAX_LENGTH], surname[NAME_MAX_LENGTH], dob[DOB_MAX_LENGTH], temp[15];
+    if (scanf("%s %s %s %s", name, surname, dob, temp) != 4) {
+        if (*firstOutput != 1) {
+            printf("\n");
+        } else *firstOutput = 0; 
+        printf("update failed");
+        return;
     }
-    while (operator != EOF) {
-        int srch_result;
-        switch (operator) {
-            case 'i':
-                // Insert into hash
-                if (insert(hash_map) == -1) {
-                    if (!first) {
-                        printf("\n");
-                    }
-                    printf("insert failed");
-                    first = 0;
-                }
-                break;
-
-            case 's':
-                // Search in hash
-                srch_result = search(hash_map);
-                if (!first) {
+    int index = hash(name, surname, dob);
+    int amount = strToNum(temp);
+    for (PersonDATA* ptr = hash_map[index]; ptr; ptr = ptr->next) {
+        if (!customStrCmp(ptr->name, name) && !customStrCmp(ptr->surname, surname) && !customStrCmp(ptr->dob, dob)) {
+            if (ptr->balance + amount < 0) {
+                if (*firstOutput != 1) {
                     printf("\n");
-                }
-                if (srch_result == -1) {
-                    printf("search failed");
-                } else {
-                    printf("%d,%02d", srch_result / 100, srch_result % 100);
-                    first = 0;
-                }
-                break;
-
-            case 'u':
-                // Update hash
-                if (update(hash_map) == -1) {
-                    if (!first) {
-                        printf("\n");
-                    }
-                    printf("update failed");
-                    first = 0;
-                }
-                break;
-
-            case 'd':
-                // Delete from hash
-                if (delete(hash_map) == -1) {
-                    if (!first) {
-                        printf("\n");
-                    }
-                    printf("delete failed");
-                    first = 0;
-                }
-                break;
+                } else *firstOutput = 0;
+                printf("update failed");
+                return;
+            }
+            ptr->balance += amount;
+            return;
         }
-        operator = getchar();
+    }
+    if (*firstOutput != 1) {
+        printf("\n");
+    } else *firstOutput = 0;
+    printf("update failed");
+}
+
+
+void delete(PersonDATA* hash_map[], int * firstOutput) {
+    char name[NAME_MAX_LENGTH], surname[NAME_MAX_LENGTH], dob[DOB_MAX_LENGTH];
+    if (scanf("%s %s %s", name, surname, dob) != 3) {
+        if (*firstOutput != 1) {
+            printf("\n");
+        } else *firstOutput = 0;
+        printf("delete failed");
+        return;
+    }
+    int index = hash(name, surname, dob);
+    PersonDATA **ptr = &hash_map[index], *temp;
+    while (*ptr) {
+        if (!customStrCmp((*ptr)->name, name) && !customStrCmp((*ptr)->surname, surname) && !customStrCmp((*ptr)->dob, dob)) {
+            temp = *ptr;
+            *ptr = (*ptr)->next;
+            free(temp);
+            return;
+        }
+        ptr = &(*ptr)->next;
+    }
+    if (*firstOutput != 1) {
+            printf("\n");
+        } else *firstOutput = 0;
+    printf("delete failed");
+}
+
+int customStrCmp(const char* str1, const char* str2) {
+    while (*str1 && (*str1 == *str2)) {
+        str1++;
+        str2++;
+    }
+    return *(const unsigned char *)str1 - *(const unsigned char *)str2;
+}
+
+void customStrCpy(char* dest, const char* src) {
+    while (*src) {
+        *dest++ = *src++;
+    }
+    *dest = '\0';
+}
+
+int main() {
+    PersonDATA* hash_map[TABLE_SIZE] = {0};
+    char operation;
+    int firstOutput = 1;  // Flag to control the first line output
+    while (scanf(" %c", &operation) != EOF) {
+        switch (operation) {
+            case 'i': insert(hash_map, &firstOutput); break;
+            case 's': search(hash_map, &firstOutput); break;
+            case 'u': update(hash_map, &firstOutput); break;
+            case 'd': delete(hash_map, &firstOutput); break;
+            default: break;
+        }
     }
     return 0;
 }
